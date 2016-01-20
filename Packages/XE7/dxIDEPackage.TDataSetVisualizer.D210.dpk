@@ -26,6 +26,7 @@ package dxIDEPackage.TDataSetVisualizer.D210;
 {$DEFINE DEBUG}
 {$DEFINE SUPPORT_ADO_DATASETS}
 {$DEFINE SUPPORT_FIREDAC_DATASETS}
+{$DEFINE SUPPORT_DATASNAP_DATASETS}
 {$ENDIF IMPLICITBUILDING}
 {$IMPLICITBUILD ON}
 
@@ -43,8 +44,10 @@ requires
   FireDACCommonDriver,
   FireDACCommon,
   {$ENDIF}
-  vcldb,
-  dsnap;
+  {$IFDEF SUPPORT_DATASNAP_DATASETS}
+  dsnap,
+  {$ENDIF}
+  vcldb;
 
 contains
   dxTDataSetVisualizer in '..\..\Source\dxTDataSetVisualizer.pas' {dxCustomObjectViewerFrame: TFrame};

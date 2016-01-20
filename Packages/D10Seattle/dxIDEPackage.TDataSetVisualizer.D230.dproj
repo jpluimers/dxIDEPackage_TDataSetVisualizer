@@ -79,28 +79,28 @@
         <DCC_K>false</DCC_K>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Android)'!=''">
-        <DCC_UsePackage>rtl;dbrtl;FireDAC;FireDACCommonDriver;FireDACCommon;$(DCC_UsePackage)</DCC_UsePackage>
+        <DCC_UsePackage>rtl;dbrtl;FireDAC;FireDACCommonDriver;FireDACCommon;dsnap;$(DCC_UsePackage)</DCC_UsePackage>
         <EnabledSysJars>android-support-v4.dex.jar;apk-expansion.dex.jar;cloud-messaging.dex.jar;fmx.dex.jar;google-analytics-v2.dex.jar;google-play-billing.dex.jar;google-play-licensing.dex.jar;google-play-services.dex.jar</EnabledSysJars>
         <DCC_CBuilderOutput>None</DCC_CBuilderOutput>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_iOSDevice32)'!=''">
-        <DCC_UsePackage>rtl;dbrtl;FireDAC;FireDACCommonDriver;FireDACCommon;$(DCC_UsePackage)</DCC_UsePackage>
+        <DCC_UsePackage>rtl;dbrtl;FireDAC;FireDACCommonDriver;FireDACCommon;dsnap;$(DCC_UsePackage)</DCC_UsePackage>
         <DCC_CBuilderOutput>None</DCC_CBuilderOutput>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_iOSDevice64)'!=''">
-        <DCC_UsePackage>rtl;dbrtl;FireDAC;FireDACCommonDriver;FireDACCommon;$(DCC_UsePackage)</DCC_UsePackage>
+        <DCC_UsePackage>rtl;dbrtl;FireDAC;FireDACCommonDriver;FireDACCommon;dsnap;$(DCC_UsePackage)</DCC_UsePackage>
         <DCC_CBuilderOutput>None</DCC_CBuilderOutput>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_iOSSimulator)'!=''">
-        <DCC_UsePackage>rtl;dbrtl;FireDAC;FireDACCommonDriver;FireDACCommon;$(DCC_UsePackage)</DCC_UsePackage>
+        <DCC_UsePackage>rtl;dbrtl;FireDAC;FireDACCommonDriver;FireDACCommon;dsnap;$(DCC_UsePackage)</DCC_UsePackage>
         <DCC_CBuilderOutput>None</DCC_CBuilderOutput>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_OSX32)'!=''">
-        <DCC_UsePackage>rtl;dbrtl;FireDAC;FireDACCommonDriver;FireDACCommon;$(DCC_UsePackage)</DCC_UsePackage>
+        <DCC_UsePackage>rtl;dbrtl;FireDAC;FireDACCommonDriver;FireDACCommon;dsnap;$(DCC_UsePackage)</DCC_UsePackage>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
-        <DCC_Define>SUPPORT_ADO_DATASETS;SUPPORT_FIREDAC_DATASETS;$(DCC_Define)</DCC_Define>
-        <DCC_UsePackage>rtl;dxIDEPackage.JSONStringVisualizer.D10Seattle;dxLibD230;dbrtl;vcldb;adortl;FireDAC;FireDACCommonDriver;FireDACCommon;$(DCC_UsePackage)</DCC_UsePackage>
+        <DCC_Define>SUPPORT_ADO_DATASETS;SUPPORT_FIREDAC_DATASETS;SUPPORT_DATASNAP_DATASETS;$(DCC_Define)</DCC_Define>
+        <DCC_UsePackage>rtl;dxIDEPackage.JSONStringVisualizer.D10Seattle;dxLibD230;dbrtl;vcldb;adortl;FireDAC;FireDACCommonDriver;FireDACCommon;dsnap;$(DCC_UsePackage)</DCC_UsePackage>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Keys>CompanyName=;FileDescription=https://github.com/darianmiller/dxIDEPackage_TDataSetVisualizer;FileVersion=1.0.0.0;InternalName=dxIDEPackage.TDataSetVisualizer;LegalCopyright=Copyright (c) 2016 Darian Miller  All Rights Reserved
@@ -108,7 +108,7 @@
         <DCC_Namespace>System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;Winapi;$(DCC_Namespace)</DCC_Namespace>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
-        <DCC_UsePackage>rtl;dbrtl;vcldb;adortl;FireDAC;FireDACCommonDriver;FireDACCommon;$(DCC_UsePackage)</DCC_UsePackage>
+        <DCC_UsePackage>rtl;dbrtl;vcldb;adortl;FireDAC;FireDACCommonDriver;FireDACCommon;dsnap;$(DCC_UsePackage)</DCC_UsePackage>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
@@ -142,6 +142,7 @@
         <DCCReference Include="FireDACCommonDriver.dcp"/>
         <DCCReference Include="FireDACCommon.dcp"/>
         <DCCReference Include="vcldb.dcp"/>
+        <DCCReference Include="dsnap.dcp"/>
         <DCCReference Include="..\..\Source\dxTDataSetVisualizer.pas">
             <Form>dxCustomObjectViewerFrame</Form>
             <DesignClass>TFrame</DesignClass>
@@ -194,7 +195,16 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployClass Name="ProjectiOSDeviceResourceRules"/>
+                <DeployClass Name="DependencyModule">
+                    <Platform Name="Win32">
+                        <Operation>0</Operation>
+                        <Extensions>.dll;.bpl</Extensions>
+                    </Platform>
+                    <Platform Name="OSX32">
+                        <Operation>1</Operation>
+                        <Extensions>.dylib</Extensions>
+                    </Platform>
+                </DeployClass>
                 <DeployClass Name="ProjectOSXResource">
                     <Platform Name="OSX32">
                         <RemoteDir>Contents\Resources</RemoteDir>
@@ -508,16 +518,7 @@
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>
-                <DeployClass Name="DependencyModule">
-                    <Platform Name="Win32">
-                        <Operation>0</Operation>
-                        <Extensions>.dll;.bpl</Extensions>
-                    </Platform>
-                    <Platform Name="OSX32">
-                        <Operation>1</Operation>
-                        <Extensions>.dylib</Extensions>
-                    </Platform>
-                </DeployClass>
+                <DeployClass Name="ProjectiOSDeviceResourceRules"/>
                 <ProjectRoot Platform="iOSDevice64" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="Win64" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="iOSDevice32" Name="$(PROJECTNAME).app"/>
