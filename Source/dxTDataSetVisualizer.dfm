@@ -1,14 +1,14 @@
 object dxCustomObjectViewerFrame: TdxCustomObjectViewerFrame
   Left = 0
   Top = 0
-  Width = 600
-  Height = 327
+  Width = 638
+  Height = 329
   TabOrder = 0
   object dbGrid: TDBGrid
     Left = 0
     Top = 0
-    Width = 600
-    Height = 305
+    Width = 638
+    Height = 306
     Align = alClient
     DataSource = gridDataSource
     Options = [dgTitles, dgIndicator, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgConfirmDelete, dgCancelOnExit, dgTitleClick, dgTitleHotTrack]
@@ -21,17 +21,17 @@ object dxCustomObjectViewerFrame: TdxCustomObjectViewerFrame
   end
   object Panel1: TPanel
     Left = 0
-    Top = 305
-    Width = 600
-    Height = 22
+    Top = 306
+    Width = 638
+    Height = 23
     Align = alBottom
     TabOrder = 1
-    object labFileSize: TLabel
+    object labFileOperation: TLabel
       Left = 82
       Top = 4
-      Width = 49
+      Width = 78
       Height = 13
-      Caption = 'labFileSize'
+      Caption = 'labFileOperation'
     end
     object butExport: TButton
       Left = 8
