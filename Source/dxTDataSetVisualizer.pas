@@ -77,7 +77,7 @@ uses
   {$IFDEF SUPPORT_FIREDAC_DATASETS}
   FireDAC.Comp.Client,
   {$ENDIF}
-  System.IOUtils;
+  System.IOUtils, Datasnap.DBClient;
 
 {$R *.dfm}
 
@@ -254,9 +254,20 @@ begin
     end;
     {$ENDIF}
 
+    if not Assigned(fDataset) then
+    begin
+      if Evaluate(Format('BoolToStr(%s is TClientDataSet)', [FExpression])) = IS_TRUE then
+      begin
+        if Evaluate(Format('BoolToStr(%s.State<>dsInactive)', [FExpression])) = IS_TRUE then
+        begin
+          fDataSet := TClientDataSet.Create(fOwningForm);
+        end;
+      end;
+    end;
+
     if Assigned(fDataSet) then
     begin
-      //ADO + FireDac both support .SaveToFile
+      //ADO, FireDac and TClientDataSet support .SaveToFile
       Evaluate(Format('%s.SaveToFile(%s)', [FExpression, QuotedStr(vTempFileName)]));
 
       vFileSize := GetFileSize(vTempFileName);
@@ -275,6 +286,11 @@ begin
           TFDMemTable(fDataSet).LoadFromFile(vTempFileName);
         end;
         {$ENDIF}
+        if fDataSet is TClientDataSet then
+        begin
+          TClientDataSet(fDataSet).LoadFromFile(vTempFileName);
+        end;
+
         gridDataSource.DataSet := fDataSet;
       end;
     end;
@@ -299,25 +315,30 @@ end;
 
 procedure TdxCustomObjectViewerFrame.butExportClick(Sender: TObject);
 begin
-  if Assigned(fDataSet) then
+  if not Assigned(fDataSet) then
+    Exit;
+
+  if not SaveDialog1.Execute(self.Handle) then
+    Exit;
+
+  //TDataSet doesn't support SaveToFile...do a specific SaveToFile based on custom Type created
+  {$IFDEF SUPPORT_ADO_DATASETS}
+  if fDataSet is TCustomADODataSet then
   begin
-    if SaveDialog1.Execute(self.Handle) then
-    begin
-      //TDataSet doesn't support SaveToFile...do a specific SaveToFile based on custom Type created
-      {$IFDEF SUPPORT_ADO_DATASETS}
-      if fDataSet is TCustomADODataSet then
-      begin
-        TCustomADODataSet(fDataSet).SaveToFile(SaveDialog1.FileName);
-      end;
-      {$ENDIF}
-      {$IFDEF SUPPORT_FIREDAC_DATASETS}
-      if fDataSet is TFDMemTable then
-      begin
-        TFDMemTable(fDataSet).SaveToFile(SaveDialog1.FileName);
-      end;
-      {$ENDIF}
-    end;
+    TCustomADODataSet(fDataSet).SaveToFile(SaveDialog1.FileName);
+    Exit;
   end;
+  {$ENDIF}
+  {$IFDEF SUPPORT_FIREDAC_DATASETS}
+  if fDataSet is TFDMemTable then
+  begin
+    TFDMemTable(fDataSet).SaveToFile(SaveDialog1.FileName);
+    Exit;
+  end;
+  {$ENDIF}
+
+  if fDataSet is TClientDataSet then
+    TClientDataSet(fDataSet).SaveToFile(SaveDialog1.FileName);
 end;
 
 procedure TdxCustomObjectViewerFrame.CloseVisualizer;
