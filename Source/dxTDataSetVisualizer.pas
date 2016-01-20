@@ -76,6 +76,7 @@ uses
   {$ENDIF}
   {$IFDEF SUPPORT_FIREDAC_DATASETS}
   FireDAC.Comp.Client,
+  FireDAC.Stan.StorageBin, //auto-registers a binary storage output format
   {$ENDIF}
   {$IFDEF SUPPORT_DATASNAP_DATASETS}
   Datasnap.DBClient,
