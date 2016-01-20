@@ -24,7 +24,7 @@ type
     dbGrid: TDBGrid;
     gridDataSource: TDataSource;
     Panel1: TPanel;
-    labFileSize: TLabel;
+    labFileOperation: TLabel;
     SaveDialog1: TSaveDialog;
     butExport: TButton;
     procedure butExportClick(Sender: TObject);
@@ -34,6 +34,7 @@ type
     FClosedProc: TOTAVisualizerClosedProcedure;
     FExpression: string;
     fTypeName:String;
+    fLastErrorMessage:String;
     FNotifierIndex: Integer;
     FCompleted: Boolean;
     FDeferredResult: string;
@@ -231,10 +232,12 @@ var
 begin
   FAvailableState := asAvailable;
   FExpression := Expression;
+  fLastErrorMessage := '';
   fTypeName := TypeName;
 
   FreeAndNil(fDataSet);
   gridDataSource.DataSet := nil;
+  labFileOperation.Caption := 'Saving dataset to file...';
   vFileSize := 0;
 
   vTempFileName := TPath.GetTempFileName();
@@ -270,6 +273,7 @@ begin
     {$ENDIF}
 
 
+    fLastErrorMessage := '';
     if Assigned(fDataSet) then
     begin
       //ADO, FireDac and TClientDataSet support .SaveToFile
@@ -307,8 +311,21 @@ begin
   end;
 
   butExport.Enabled := (vFileSize > 0);
-  labFileSize.Caption := FormatFloat('#,##0', vFileSize) + ' bytes';
+  labFileOperation.Caption := FormatFloat('#,##0', vFileSize) + ' bytes';
   dbGrid.Invalidate;
+
+  if (vFileSize = 0) and (Length(fLastErrorMessage) > 0) then
+  begin
+    labFileOperation.Caption := 'Error with <yourdataset>.SaveToFile: [' + fLastErrorMessage + ']';
+    {$IFDEF SUPPORT_FIREDAC_DATASETS}
+    if Pos('EFDException', fLastErrorMessage) > -1 then
+    begin
+      //Expand on possible common error description
+      //Suggested quick fix: add "FireDAC.Stan.StorageBin" to any Uses clause within your debugged application
+      labFileOperation.Caption := 'Ensure debugged application has a TFDStanStorageXxxLink registered. ' + labFileOperation.Caption;
+    end;
+    {$ENDIF}
+  end;
 end;
 
 procedure TdxCustomObjectViewerFrame.AfterSave;
@@ -385,6 +402,7 @@ var
 begin
   begin
     Result := '';
+    fLastErrorMessage := '';
     if Supports(BorlandIDEServices, IOTADebuggerServices, DebugSvcs) then
       CurProcess := DebugSvcs.CurrentProcess;
     if CurProcess <> nil then
@@ -403,19 +421,31 @@ begin
               begin
                 FCompleted := False;
                 FDeferredResult := '';
+                fLastErrorMessage := '';
                 FDeferredError := False;
                 FNotifierIndex := CurThread.AddNotifier(Self);
                 while not FCompleted do
                   DebugSvcs.ProcessDebugEvents;
                 CurThread.RemoveNotifier(FNotifierIndex);
                 FNotifierIndex := -1;
-                if not FDeferredError then
+                if FDeferredError then
+                begin
+                  if FDeferredResult <> '' then
+                    fLastErrorMessage := FDeferredResult
+                  else
+                    fLastErrorMessage := ResultStr;
+                end
+                else
                 begin
                   if FDeferredResult <> '' then
                     Result := FDeferredResult
                   else
                     Result := ResultStr;
                 end;
+              end;
+            erError:
+              begin
+                fLastErrorMessage := ResultStr;
               end;
             erBusy:
               begin
