@@ -1,4 +1,4 @@
-package dxIDEPackage.TDataSetVisualizer.D230;
+package dxIDEPackage.TDataSetVisualizer.D210;
 
 {$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
