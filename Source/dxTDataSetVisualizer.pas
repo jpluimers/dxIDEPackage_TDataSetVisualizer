@@ -24,7 +24,7 @@ type
     dbGrid: TDBGrid;
     gridDataSource: TDataSource;
     Panel1: TPanel;
-    labFileOperation: TLabel;
+    labFileSize: TLabel;
     SaveDialog1: TSaveDialog;
     butExport: TButton;
     procedure butExportClick(Sender: TObject);
@@ -229,61 +229,75 @@ const
 var
   vTempFileName:String;
   vFileSize:Int64;
+  DebugSvcs: IOTADebuggerServices;
+  vIsFireDAC:Boolean;
+  vCurrentState:String;
 begin
+  if not Supports(BorlandIDEServices, IOTADebuggerServices, DebugSvcs) then Exit;
+
   FAvailableState := asAvailable;
   FExpression := Expression;
   fLastErrorMessage := '';
   fTypeName := TypeName;
+  vIsFireDAC := False;
 
   FreeAndNil(fDataSet);
   gridDataSource.DataSet := nil;
-  labFileOperation.Caption := 'Saving dataset to file...';
   vFileSize := 0;
 
   vTempFileName := TPath.GetTempFileName();
   try
 
-    {$IFDEF SUPPORT_ADO_DATASETS}
-    if Evaluate(Format('BoolToStr(%s is TCustomADODataSet)', [FExpression])) = IS_TRUE then
+    //Note: if in Edit/Insert mode, will likely generate an unwanted Post...
+    //only proceed if in Browse mode. Initially checked for State<>dsInactive
+    vCurrentState := Evaluate(Format('%s.State)', [FExpression]));
+    if vCurrentState = 'dsBrowse' then
     begin
-      {TADODataSet, TADOQuery, TADOStoredProc...}
-      fDataSet := TADODataSet.Create(fOwningForm);
-    end;
-    {$ENDIF}
 
-    {$IFDEF SUPPORT_FIREDAC_DATASETS}
-    if Evaluate(Format('BoolToStr(%s is TFDDataSet)', [FExpression])) = IS_TRUE then
-    begin
-      {TFDMemTable, TFDQuery, TFDStoredProc, TFDTable...}
-      if Evaluate(Format('BoolToStr(%s.State<>dsInactive)', [FExpression])) = IS_TRUE then
+      {$IFDEF SUPPORT_ADO_DATASETS}
+      if Evaluate(Format('BoolToStr(%s is TCustomADODataSet)', [FExpression])) = IS_TRUE then
       begin
+        {TADODataSet, TADOQuery, TADOStoredProc...}
+        fDataSet := TADODataSet.Create(fOwningForm);
+      end;
+      {$ENDIF}
+
+      {$IFDEF SUPPORT_FIREDAC_DATASETS}
+      if Evaluate(Format('BoolToStr(%s is TFDDataSet)', [FExpression])) = IS_TRUE then
+      begin
+        {TFDMemTable, TFDQuery, TFDStoredProc, TFDTable...}
+        vIsFireDAC := True;
         fDataSet := TFDMemTable.Create(fOwningForm);
       end;
-    end;
-    {$ENDIF}
+      {$ENDIF}
 
-    {$IFDEF SUPPORT_DATASNAP_DATASETS}
-    if Evaluate(Format('BoolToStr(%s is TClientDataSet)', [FExpression])) = IS_TRUE then
-    begin
-      if Evaluate(Format('BoolToStr(%s.State<>dsInactive)', [FExpression])) = IS_TRUE then
+      {$IFDEF SUPPORT_DATASNAP_DATASETS}
+      if Evaluate(Format('BoolToStr(%s is TClientDataSet)', [FExpression])) = IS_TRUE then
       begin
         fDataSet := TClientDataSet.Create(fOwningForm);
       end;
+      {$ENDIF}
+
+    end
+    else
+    begin
+      DebugSvcs.LogString('Skipping export of [' + Expression + '], DataSet current state is: ' + vCurrentState, litDefault);
     end;
-    {$ENDIF}
 
 
     fLastErrorMessage := '';
     if Assigned(fDataSet) then
     begin
       //ADO, FireDac and TClientDataSet support .SaveToFile
+      DebugSvcs.LogString('Exporting dataset for [' + Expression + '] to temp file: ' + vTempFileName, litDefault);
       Evaluate(Format('%s.SaveToFile(%s)', [FExpression, QuotedStr(vTempFileName)]));
 
       vFileSize := GetFileSize(vTempFileName);
       if (vFileSize > 0) then
       begin
-        //TDataSet doesn't support LoadFromFile...do a specific LoadFromFile based on custom Type created
+        DebugSvcs.LogString('Exported dataset filesize: ' + IntToStr(vFileSize) + ' bytes', litDefault);
 
+        //TDataSet doesn't support LoadFromFile...do a specific LoadFromFile based on custom Type created
         {$IFDEF SUPPORT_ADO_DATASETS}
         if fDataSet is TCustomADODataSet then
         begin
@@ -311,18 +325,19 @@ begin
   end;
 
   butExport.Enabled := (vFileSize > 0);
-  labFileOperation.Caption := FormatFloat('#,##0', vFileSize) + ' bytes';
+  labFileSize.Caption := FormatFloat('#,##0', vFileSize) + ' bytes';
   dbGrid.Invalidate;
 
   if (vFileSize = 0) and (Length(fLastErrorMessage) > 0) then
   begin
-    labFileOperation.Caption := 'Error with <yourdataset>.SaveToFile: [' + fLastErrorMessage + ']';
+    DebugSvcs.LogString('Error with <yourdataset>.SaveToFile: [' + fLastErrorMessage + ']', litDefault);
+
     {$IFDEF SUPPORT_FIREDAC_DATASETS}
-    if Pos('EFDException', fLastErrorMessage) > -1 then
+    //Expand on possible common error description
+    if vIsFireDAC and (Pos('EFDException', fLastErrorMessage) > 0) then
     begin
-      //Expand on possible common error description
-      //Suggested quick fix: add "FireDAC.Stan.StorageBin" to any Uses clause within your debugged application
-      labFileOperation.Caption := 'Ensure debugged application has a TFDStanStorageXxxLink registered. ' + labFileOperation.Caption;
+      //(if no factory registered to generate a storage link, then the .SaveToFile call will fail.)
+      DebugSvcs.LogString('FireDAC suggested quick fix: Add unit "FireDAC.Stan.StorageBin" to your debugged application to register a TFDStanStorageXxxLink factory.', litDefault);
     end;
     {$ENDIF}
   end;

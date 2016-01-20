@@ -26,12 +26,12 @@ object dxCustomObjectViewerFrame: TdxCustomObjectViewerFrame
     Height = 23
     Align = alBottom
     TabOrder = 1
-    object labFileOperation: TLabel
+    object labFileSize: TLabel
       Left = 82
       Top = 4
-      Width = 78
+      Width = 49
       Height = 13
-      Caption = 'labFileOperation'
+      Caption = 'labFileSize'
     end
     object butExport: TButton
       Left = 8
