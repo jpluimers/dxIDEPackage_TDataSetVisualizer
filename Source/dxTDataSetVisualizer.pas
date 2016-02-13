@@ -21,12 +21,15 @@ type
 
   TdxCustomObjectViewerFrame = class(TFrame, IOTADebuggerVisualizerExternalViewerUpdater,
     IOTAThreadNotifier, IOTAThreadNotifier160)
-    dbGrid: TDBGrid;
     gridDataSource: TDataSource;
     Panel1: TPanel;
     labFileSize: TLabel;
     SaveDialog1: TSaveDialog;
     butExport: TButton;
+    Panel2: TPanel;
+    dbGrid: TDBGrid;
+    Splitter1: TSplitter;
+    memSQL: TMemo;
     procedure butExportClick(Sender: TObject);
   private
     fDataSet:TDataSet;
@@ -224,6 +227,19 @@ begin
 end;
 
 procedure TdxCustomObjectViewerFrame.CustomDisplay(const Expression, TypeName, EvalResult: string);
+          function ReformatDebuggerText(const aInput:String):String;
+          const
+            CRLF = '#$D#$A';
+          begin
+            //Quick-n-dirty fixup for strings like:
+            //{"test":123}'#$D#$A#9'{"test":123}'#$D#$A
+            Result := StringReplace(aInput, QuotedStr(CRLF), ' ', [rfReplaceAll]);
+            while Result.EndsWith(CRLF) do
+            begin
+              Result := Copy(Result, 1, Length(Result) - Length(CRLF));
+            end;
+            Result := Result.DeQuotedString;
+          end;
 const
   IS_TRUE = '''-1''';  //QuotedStr('1') as it comes back from the debugger via Evaluate()
 var
@@ -232,6 +248,7 @@ var
   DebugSvcs: IOTADebuggerServices;
   vIsFireDAC:Boolean;
   vCurrentState:String;
+  vText:String;
 begin
   if not Supports(BorlandIDEServices, IOTADebuggerServices, DebugSvcs) then Exit;
 
@@ -244,21 +261,30 @@ begin
   FreeAndNil(fDataSet);
   gridDataSource.DataSet := nil;
   vFileSize := 0;
+  memSQL.Clear;
 
   vTempFileName := TPath.GetTempFileName();
   try
-
     //Note: if in Edit/Insert mode, will likely generate an unwanted Post...
     //only proceed if in Browse mode. Initially checked for State<>dsInactive
     vCurrentState := Evaluate(Format('%s.State)', [FExpression]));
     if vCurrentState = 'dsBrowse' then
     begin
-
       {$IFDEF SUPPORT_ADO_DATASETS}
       if Evaluate(Format('BoolToStr(%s is TCustomADODataSet)', [FExpression])) = IS_TRUE then
       begin
         {TADODataSet, TADOQuery, TADOStoredProc...}
         fDataSet := TADODataSet.Create(fOwningForm);
+
+        if Evaluate(Format('BoolToStr(%s is TADOQuery)', [FExpression])) = IS_TRUE then
+        begin
+          vText := (Format('%s.SQL.Text)', [FExpression]));
+          memSQL.Lines.Add(ReformatDebuggerText(vText));
+        end
+        else if Evaluate(Format('BoolToStr(%s is TADOStoredProc)', [FExpression])) = IS_TRUE then
+        begin
+          memSQL.Lines.Add(Evaluate(Format('%s.ProcedureName)', [FExpression])));
+        end;
       end;
       {$ENDIF}
 
@@ -268,6 +294,16 @@ begin
         {TFDMemTable, TFDQuery, TFDStoredProc, TFDTable...}
         vIsFireDAC := True;
         fDataSet := TFDMemTable.Create(fOwningForm);
+
+        if Evaluate(Format('BoolToStr(%s is TFDQuery)', [FExpression])) = IS_TRUE then
+        begin
+          vText := Evaluate(Format('%s.SQL.Text)', [FExpression]));
+          memSQL.Lines.Add(ReformatDebuggerText(vText));
+        end
+        else if Evaluate(Format('BoolToStr(%s is TFDStoredProc)', [FExpression])) = IS_TRUE then
+        begin
+          memSQL.Lines.Add(Evaluate(Format('%s.StoredProcName)', [FExpression])));
+        end;
       end;
       {$ENDIF}
 
@@ -284,6 +320,16 @@ begin
       DebugSvcs.LogString('Skipping export of [' + Expression + '], DataSet current state is: ' + vCurrentState, litDefault);
     end;
 
+    if Length(memSQL.Text) > 0 then
+    begin
+      memSQL.Visible := True;
+      Splitter1.Visible := True;
+    end
+    else
+    begin
+      memSQL.Visible := False;
+      Splitter1.Visible := False;
+    end;
 
     fLastErrorMessage := '';
     if Assigned(fDataSet) then
